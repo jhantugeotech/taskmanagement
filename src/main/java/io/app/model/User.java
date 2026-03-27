@@ -1,5 +1,6 @@
 package io.app.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,6 +26,7 @@ public class User {
     private String name;
     @Column(unique = true,nullable = false)
     private String email;
+    @JsonIgnore
     private String password;
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
