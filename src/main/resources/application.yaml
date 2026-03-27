@@ -1,14 +1,10 @@
 server:
   port: 9097
-
 spring:
+  profiles:
+    active: local
   application:
     name: TaskManagement
-
-  datasource:
-    url: jdbc:postgresql://db:5432/taskmanagement
-    username: postgres
-    password: pritam@123
 
   jpa:
     show-sql: true
