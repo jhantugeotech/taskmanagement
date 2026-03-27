@@ -16,4 +16,5 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
 
-
+jwt:
+  secret: BKKmzEXCXOQenB2jqKUFJGWbr2Pd7OGcOW9EPqXTuFmIwUdhc1aTdmmspJUz4XMjL6LY1xRgIbUYWpnFJBT6zO
