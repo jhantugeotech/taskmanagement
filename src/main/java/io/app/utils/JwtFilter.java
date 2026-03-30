@@ -1,6 +1,7 @@
 package io.app.utils;
 
 import io.app.service.impl.CustomUserDetailsService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,25 +28,32 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String header=request.getHeader("Authorization");
+        try{
+            String header=request.getHeader("Authorization");
 
-        if (header==null || !header.startsWith("Bearer")){
+            if (header==null || !header.startsWith("Bearer")){
+                filterChain.doFilter(request,response);
+                return;
+            }
+
+            final String token=header.substring(7);
+            String username= jwtUtils.extractUsername(token);
+
+            if (!username.isEmpty() && SecurityContextHolder.getContext().getAuthentication()==null){
+                UserDetails userDetails=userDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken auth=new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            }
             filterChain.doFilter(request,response);
-            return;
+        }catch (ExpiredJwtException ex){
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter()
+                    .write("{\"message\": \"Your session has expired. Please log in again.\",\"status\": false}");
         }
-
-        final String token=header.substring(7);
-        String username= jwtUtils.extractUsername(token);
-
-        if (!username.isEmpty() && SecurityContextHolder.getContext().getAuthentication()==null){
-            UserDetails userDetails=userDetailsService.loadUserByUsername(username);
-            UsernamePasswordAuthenticationToken auth=new UsernamePasswordAuthenticationToken(
-                    userDetails,
-                    null,
-                    userDetails.getAuthorities()
-            );
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        }
-        filterChain.doFilter(request,response);
     }
 }
