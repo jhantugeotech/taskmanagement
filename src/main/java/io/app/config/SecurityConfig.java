@@ -1,5 +1,6 @@
 package io.app.config;
 
+import io.app.exception.CustomAccessDeniedHandler;
 import io.app.utils.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,9 +17,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
     private final JwtFilter jwtFilter;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
-    public SecurityConfig(JwtFilter jwtFilter){
+    public SecurityConfig(JwtFilter jwtFilter,CustomAccessDeniedHandler accessDeniedHandler){
         this.jwtFilter=jwtFilter;
+        this.accessDeniedHandler=accessDeniedHandler;
     }
 
     @Bean
@@ -30,8 +33,8 @@ public class SecurityConfig {
                         .anyRequest()
                         .authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(exception->exception.accessDeniedHandler(accessDeniedHandler));
         return http.build();
     }
 
