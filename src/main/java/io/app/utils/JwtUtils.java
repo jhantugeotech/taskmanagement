@@ -20,7 +20,7 @@ public class JwtUtils {
 
     private SecretKey signinkey;
 
-    private final long JWT_EXPIRATION=3600000;
+    private final long JWT_EXPIRATION=86400000L;
 
     @PostConstruct
     private void preConstruct(){
