@@ -2,6 +2,7 @@ package io.app.service.impl;
 
 import io.app.dto.UserDto;
 import io.app.exception.ResourceNotFoundException;
+import io.app.mapper.ModelMapper;
 import io.app.model.Role;
 import io.app.model.User;
 import io.app.repository.UserRepository;
@@ -12,7 +13,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -36,6 +40,14 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .roles(user.getRoles())
                 .build();
+    }
+
+    @Override
+    public List<UserDto> users() {
+        List<User> users=repository.findAll();
+        List<UserDto> restult=users.stream().map(ModelMapper::userToDto)
+                .collect(Collectors.toList());
+        return restult;
     }
 
     @PostConstruct
