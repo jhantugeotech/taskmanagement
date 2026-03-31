@@ -3,16 +3,13 @@ package io.app.controller;
 import io.app.dto.ApiResponse;
 import io.app.dto.TaskDto;
 import io.app.dto.TaskExecutionDto;
-import io.app.model.Task;
 import io.app.model.TaskStatus;
-import io.app.service.TaskService;
 import io.app.service.impl.CustomUserDetails;
 import io.app.service.impl.TaskServiceImpl;
-import org.apache.coyote.Response;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,17 +25,27 @@ public class TaskController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse create(@RequestBody TaskDto task,
+    public ResponseEntity<ApiResponse> create(@RequestBody TaskDto task,
                               @AuthenticationPrincipal CustomUserDetails userDetails){
-        return service.create(task,userDetails.getUserId());
+        return new ResponseEntity<>(service.create(task,userDetails.getUserId()),HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll(
-            @RequestParam(value = "page",defaultValue = "0",required = false) int pageNo,
-            @RequestParam(value = "size",defaultValue = "10",required = false) int pageSize){
-        return ResponseEntity.ok(service.getAll(pageNo,pageSize));
+    public ResponseEntity<Page<TaskDto>> getTasks(
+            @RequestParam(value = "page", defaultValue = "0") int pageNo,
+            @RequestParam(value = "size", defaultValue = "10") int pageSize,
+            @RequestParam(value = "status", required = false) TaskStatus status,
+            @RequestParam(value = "search", required = false) String search,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Page<TaskDto> result = service.getAll(
+                userDetails.getUserId(),
+                status,
+                search,
+                pageNo,
+                pageSize
+        );
+        return new ResponseEntity(result,HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -48,9 +55,17 @@ public class TaskController {
         return ResponseEntity.ok(service.update(id,taskDto));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/admin/{id}/task")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<TaskDto> getById(@PathVariable Long id){
         return ResponseEntity.ok(service.getById(id));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("@taskSecurityService.canRead(#id,authentication.principal.userId)")
+    public ResponseEntity<TaskDto> getById(@PathVariable Long id,
+                                           @AuthenticationPrincipal CustomUserDetails userDetails){
+        return ResponseEntity.ok(service.getById(id,userDetails.getUserId()));
     }
 
     @GetMapping("/{id}/dependencies")
@@ -81,10 +96,10 @@ public class TaskController {
         return ResponseEntity.ok(service.removeDependency(id,dependencyId));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<Set<TaskDto>> search(@RequestParam("keyword") String keyword){
-        return ResponseEntity.ok(service.search(keyword));
-    }
+//    @GetMapping("/search")
+//    public ResponseEntity<Set<TaskDto>> search(@RequestParam("keyword") String keyword){
+//        return ResponseEntity.ok(service.search(keyword));
+//    }
 
     @GetMapping("/{id}/blocked")
     public ResponseEntity<ApiResponse> checkBlockedNonBlocked(@PathVariable("id") Long id){

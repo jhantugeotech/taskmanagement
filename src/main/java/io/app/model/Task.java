@@ -27,6 +27,7 @@ public class Task {
     private String title;
     private String description;
     @Enumerated(EnumType.STRING)
+    @Builder.Default
     private TaskStatus status=TaskStatus.TODO;
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(

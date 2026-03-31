@@ -16,8 +16,12 @@ import java.util.regex.Pattern;
 @Service
 @Slf4j
 public class Helpers {
-    @Autowired
+//    @Autowired
     private TaskRepository repository;
+
+    public Helpers(TaskRepository repository){
+        this.repository=repository;
+    }
 
     public boolean hasCircularDependency(Task currentTask, Task parentTask) {
         Set<Long> visited = new HashSet<>();

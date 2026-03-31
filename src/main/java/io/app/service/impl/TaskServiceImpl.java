@@ -12,9 +12,7 @@ import io.app.model.TaskStatus;
 import io.app.repository.TaskRepository;
 import io.app.service.TaskService;
 import io.app.utils.Helpers;
-import lombok.experimental.Helper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,35 +37,17 @@ public class TaskServiceImpl implements TaskService {
 
 
     @Override
-    @Transactional(rollbackFor = {
-            BadRequestException.class,
-            ResourceNotFoundException.class
-    })
-    public ApiResponse create(TaskDto taskDto,Long userId) {
-        if (taskDto.getTitle()==null) {
-            throw new BadRequestException("Title required");
-        }
+    @Transactional
+    public ApiResponse create(TaskDto taskDto, Long userId) {
+        validateTaskDto(taskDto);
 
-        Task task=Task.builder()
-                .ownerId(userId)
-                .title(taskDto.getTitle())
-                .description(taskDto.getDescription())
-                .status(TaskStatus.TODO)
-                .build();
+        Task task = buildTask(taskDto, userId);
 
-        task=repository.save(task);
-        if (taskDto.getParentIds()!=null && !taskDto.getParentIds().isEmpty()){
-            Set<Task> parentTasks=new HashSet<>();
-            for (Long parentId:taskDto.getParentIds()){
-                Task parent=repository.findById(parentId)
-                        .orElseThrow(()->new ResourceNotFoundException("Invalid Parent's"));
-                if (helpers.hasCircularDependency(task,parent)){
-                    throw new BadRequestException("Circular Dependency Detected");
-                }
-                parentTasks.add(parent);
-            }
-            task.setParentTask(parentTasks);
-            task=repository.save(task);
+        task = repository.save(task);
+
+        if (taskDto.getParentIds() != null && !taskDto.getParentIds().isEmpty()) {
+            linkParentTasks(task, taskDto.getParentIds(), userId);
+            task = repository.save(task); // Save after linking parents
         }
 
         return ApiResponse.builder()
@@ -77,12 +57,32 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public Set<TaskDto> getAll(int pageNo, int pageSize) {
-        Pageable pageable= PageRequest.of(pageNo,pageSize);
-        Page<Task> tasks=repository.findAll(pageable);
-        Set<TaskDto> result=tasks.stream().map(task-> ModelMapper.taskToDto(task))
-                .collect(Collectors.toSet());
-        return result;
+    public Page<TaskDto> getAll(Long ownerId,
+                               TaskStatus status,
+                               String search,
+                               int pageNo,
+                               int pageSize) {
+        Pageable pageable = PageRequest.of(pageNo, pageSize);
+
+        Page<Task> tasks;
+
+        if (status != null && search != null) {
+            tasks = repository.findByOwnerIdAndStatusAndTitleContainingIgnoreCase(
+                    ownerId, status, search, pageable
+            );
+        } else if (status != null) {
+            tasks = repository.findByOwnerIdAndStatus(ownerId, status, pageable);
+        } else if (search != null) {
+            tasks = repository.findByOwnerIdAndTitleContainingIgnoreCase(
+                    ownerId, search, pageable
+            );
+        } else {
+            tasks = repository.findByOwnerId(ownerId, pageable);
+        }
+
+        System.out.println("total task "+tasks.getContent().size());
+
+        return tasks.map(ModelMapper::taskToDto);
     }
 
     @Override
@@ -93,34 +93,28 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public TaskDto getById(Long id, Long userId) {
+        Task task=repository.findByIdAndOwnerId(id,userId)
+                .orElseThrow(()->new ResourceNotFoundException("Task Not Fund"));
+        return ModelMapper.taskToDto(task);
+    }
+
+    @Override
     @Transactional
-    public ApiResponse update(Long id,TaskDto taskDto) {
-        Task task=repository.findById(id)
-                .orElseThrow(()->new ResourceNotFoundException("Task Does Not Exist"));
-        if(taskDto.getTitle()!=null){
-            task.setTitle(taskDto.getTitle());
-        }
-        if(taskDto.getDescription()!=null){
-            task.setDescription(taskDto.getDescription());
-        }
-        if(taskDto.getParentIds()!=null && !taskDto.getParentIds().isEmpty()){
-            Set<Task> parentTasks=new HashSet<>();
-            for(Long parentId:taskDto.getParentIds()){
-                Task parent=repository.findById(parentId)
-                        .orElseThrow(()->new ResourceNotFoundException("Invalid dependency id"));
-                if(helpers.hasCircularDependency(task,parent)){
-                    throw new BadRequestException("Circular Dependency Detected");
-                }
-                parentTasks.add(parent);
-            }
-            task.setParentTask(parentTasks);
-        }
+    public ApiResponse update(Long id, TaskDto taskDto) {
+        Task task = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Task Does Not Exist"));
+
+        updateTaskFields(task, taskDto);
+
         repository.save(task);
+
         return ApiResponse.builder()
                 .message("Task Updated Successfully")
                 .status(true)
                 .build();
     }
+
 
     @Override
     public Set<TaskDto> getDependencies(Long id) {
@@ -205,13 +199,13 @@ public class TaskServiceImpl implements TaskService {
                 .build();
     }
 
-    @Override
-    public Set<TaskDto> search(String keyword) {
-        Set<TaskDto> searchResult=repository.findByKeyword(keyword).stream()
-                .map(task->ModelMapper.taskToDto(task))
-                .collect(Collectors.toSet());
-        return searchResult;
-    }
+//    @Override
+//    public Set<TaskDto> search(String keyword) {
+//        Set<TaskDto> searchResult=repository.findByKeyword(keyword).stream()
+//                .map(task->ModelMapper.taskToDto(task))
+//                .collect(Collectors.toSet());
+//        return searchResult;
+//    }
 
     @Override
     public ApiResponse checkTaskIsBlocked(Long id) {
@@ -259,5 +253,48 @@ public class TaskServiceImpl implements TaskService {
         return helpers.executionOrderBuilder(task);
     }
 
+
+
+    private void validateTaskDto(TaskDto taskDto) {
+        if (taskDto.getTitle() == null || taskDto.getTitle().isBlank()) {
+            throw new BadRequestException("Title required");
+        }
+    }
+
+    private Task buildTask(TaskDto taskDto, Long userId) {
+        return Task.builder()
+                .ownerId(userId)
+                .title(taskDto.getTitle())
+                .description(taskDto.getDescription())
+                .build();
+    }
+
+    private void linkParentTasks(Task task, Set<Long> parentIds, Long userId) {
+        Set<Task> parentTasks = new HashSet<>();
+        for (Long parentId : parentIds) {
+            Task parent = repository.findById(parentId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Invalid Parent Task"));
+
+            if (!parent.getOwnerId().equals(userId)) {
+                throw new BadRequestException("Parent task must belong to the current user.");
+            }
+
+            if (helpers.hasCircularDependency(task, parent)) {
+                throw new BadRequestException("Circular dependency detected");
+            }
+
+            parentTasks.add(parent);
+        }
+        task.setParentTask(parentTasks);
+    }
+
+    private void updateTaskFields(Task task, TaskDto taskDto) {
+        if (taskDto.getTitle() != null && !taskDto.getTitle().isBlank()) {
+            task.setTitle(taskDto.getTitle());
+        }
+        if (taskDto.getDescription() != null) {
+            task.setDescription(taskDto.getDescription());
+        }
+    }
 
 }
