@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.security.Key;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.function.Function;
 
@@ -21,6 +23,15 @@ public class JwtUtils {
     private SecretKey signinkey;
 
     private final long JWT_EXPIRATION=86400000L;
+
+    private RSAPrivateKey privateKey;
+    private RSAPublicKey publicKey;
+
+    @PostConstruct
+    public void init() throws Exception {
+        this.privateKey=RsaKeyUtils.rsaPrivateKey();
+        this.publicKey=RsaKeyUtils.rsaPublicKey();
+    }
 
     @PostConstruct
     private void preConstruct(){
@@ -50,7 +61,8 @@ public class JwtUtils {
 
     private Claims extractClaims(String token){
         return Jwts.parser()
-                .verifyWith(this.signinkey)
+//                .verifyWith(this.signinkey)
+                .verifyWith(this.publicKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -60,9 +72,11 @@ public class JwtUtils {
         return Jwts.builder()
                 .subject(user.getEmail())
                 .claim("roles",user.getRoles())
+                .claim("userId",user.getId())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis()+JWT_EXPIRATION))
-                .signWith(this.signinkey)
+//                .signWith(this.signinkey)
+                .signWith(this.privateKey,Jwts.SIG.RS256)
                 .compact();
     }
 
