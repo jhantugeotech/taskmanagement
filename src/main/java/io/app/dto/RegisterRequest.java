@@ -1,4 +1,6 @@
 package io.app.dto;
 
-public record RegisterRequest(String email,String password) {
+import jakarta.validation.constraints.Email;
+
+public record RegisterRequest(@Email String email, String password) {
 }

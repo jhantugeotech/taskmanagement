@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Set;
 
 public interface TaskService {
-    public ApiResponse create(TaskDto task);
+    public ApiResponse create(TaskDto task,Long userId);
     public Set<TaskDto> getAll(int pageNo,int pageSize);
     public TaskDto getById(Long id);
     public ApiResponse update(Long id,TaskDto taskDto);

@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -32,23 +35,26 @@ public class Task {
             inverseJoinColumns = @JoinColumn(name = "parent_task_id")
     )
     private Set<Task> parentTask=new HashSet<>();
-    @Temporal(TemporalType.TIMESTAMP)
+    @Column(nullable = false)
+    private Long ownerId;
+    @CreatedDate
     @Column(updatable = false)
     private LocalDateTime createdAt;
-    @Temporal(TemporalType.TIMESTAMP)
+//    @Temporal(TemporalType.TIMESTAMP)
+    @LastModifiedDate
     private LocalDateTime updatedAt;
 
-
-    @PrePersist
-    private void preCreate(){
-        this.createdAt=LocalDateTime.now();
-        this.updatedAt=this.createdAt;
-    }
-
-    @PreUpdate
-    private void preUpdate(){
-        this.updatedAt=LocalDateTime.now();
-    }
+//
+//    @PrePersist
+//    private void preCreate(){
+//        this.createdAt=LocalDateTime.now();
+//        this.updatedAt=this.createdAt;
+//    }
+//
+//    @PreUpdate
+//    private void preUpdate(){
+//        this.updatedAt=LocalDateTime.now();
+//    }
 
 
 }

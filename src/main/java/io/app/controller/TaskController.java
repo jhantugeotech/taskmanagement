@@ -6,12 +6,14 @@ import io.app.dto.TaskExecutionDto;
 import io.app.model.Task;
 import io.app.model.TaskStatus;
 import io.app.service.TaskService;
+import io.app.service.impl.CustomUserDetails;
 import io.app.service.impl.TaskServiceImpl;
 import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
@@ -27,8 +29,9 @@ public class TaskController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse create(@RequestBody TaskDto task){
-        return service.create(task);
+    public ApiResponse create(@RequestBody TaskDto task,
+                              @AuthenticationPrincipal CustomUserDetails userDetails){
+        return service.create(task,userDetails.getUserId());
     }
 
     @GetMapping

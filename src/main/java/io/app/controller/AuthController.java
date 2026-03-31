@@ -4,6 +4,7 @@ import io.app.dto.ApiResponse;
 import io.app.dto.AuthResponse;
 import io.app.dto.RegisterRequest;
 import io.app.service.impl.AuthServiceImpl;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@RequestBody RegisterRequest request){
+    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest request){
         return new ResponseEntity<>(service.register(request.email(),request.password()), HttpStatus.CREATED);
     }
 

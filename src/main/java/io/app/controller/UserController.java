@@ -4,7 +4,9 @@ import io.app.dto.ApiResponse;
 import io.app.dto.UserDto;
 import io.app.model.Role;
 import io.app.model.User;
+import io.app.service.UserService;
 import io.app.service.impl.UserServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -49,7 +51,7 @@ public class UserController {
     }
 
     @PutMapping
-    @PreAuthorize("@userSecurityService.canUpdateUser(authentication,#user)")
+    @PreAuthorize("@userSezcurityService.canUpdateUser(authentication,#user)")
     public ResponseEntity<ApiResponse> updateUser(@RequestBody User user,Authentication auth){
         UserDetails userDetails=(UserDetails) auth.getPrincipal();
         return ResponseEntity.ok(service.updateUser(user,auth));

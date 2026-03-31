@@ -43,12 +43,13 @@ public class TaskServiceImpl implements TaskService {
             BadRequestException.class,
             ResourceNotFoundException.class
     })
-    public ApiResponse create(TaskDto taskDto) {
-        if (taskDto.getTitle()==null){
+    public ApiResponse create(TaskDto taskDto,Long userId) {
+        if (taskDto.getTitle()==null) {
             throw new BadRequestException("Title required");
         }
 
         Task task=Task.builder()
+                .ownerId(userId)
                 .title(taskDto.getTitle())
                 .description(taskDto.getDescription())
                 .status(TaskStatus.TODO)

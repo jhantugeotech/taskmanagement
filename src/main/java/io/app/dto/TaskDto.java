@@ -1,5 +1,6 @@
 package io.app.dto;
 
+import io.app.model.Task;
 import io.app.model.TaskStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

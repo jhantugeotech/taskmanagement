@@ -13,9 +13,11 @@ import java.util.Set;
 
 public class CustomUserDetails implements UserDetails {
     private User user;
+    private Long userId;
 
     public CustomUserDetails(User user){
         this.user=user;
+        this.userId=user.getId();
     }
 
     @Override
@@ -25,6 +27,10 @@ public class CustomUserDetails implements UserDetails {
             authorities.add(new SimpleGrantedAuthority("ROLE_"+role.name()));
         }
         return authorities;
+    }
+
+    public Long getUserId(){
+        return this.userId;
     }
 
     @Override
